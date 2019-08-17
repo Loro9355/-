@@ -84,3 +84,30 @@
         为1，命令：
           insert into emp (ename,hiredate,sal,deptno) values ('zzx1','2000-01-01',
           '2000',1);
+        或不指定字段名称：
+          insert into emp values ('lisa','2003-02-01','3000',2);
+        或含可控字段、非空但是含有默认值的字段、自增字段，可以不用在insert后的字段列表里面
+        出现，values后面只写对应字段的value。这些没写的字段可以自动设置为NULL、默认值、自
+        增的下一个数字，如：
+          insert into emp (ename,sal) values ('dony',1000); 
+        在MySQL中，insert可以一次性插入多条记录，语法：
+          insert into tablename （field1, field2, ...fieldn)
+          values 
+          (record1_value1, record1_value2, ...record1_valuen),
+          (record2_value1, record2_value2, ...record2_valuen),
+          ...
+          (recordn_value1, recordn_value2, ...recordn_valuen);
+      - 更新记录
+        表里的记录值可以通过update命令进行修改，语法：
+          update tablename set field1=value1, field2=value2,
+          ...fieldn=valuen [where condition]
+          如：
+            将表emp中ename为"lisa"的薪水（sal）改为4000：
+              update emp set sal=4000 where ename='lisa';
+        在MySQL中，update命令可以同时更新多个表中数据，语法：
+          update t1,t2,...,tn set t1.field1=expr1,...,tn.fieldn=exprn 
+          [where condition]
+          如同时更新表emp中的字段sal和表dept中的字段deptname：
+            update emp a,dept b set a.sal=a.sal*b.deptno,b.deptname=a.ename 
+            where a.deptno=b.deptno;
+          * 多表更新的语法更多地用在了根据一个表的字段，来动态地更新另一个表的字段。
