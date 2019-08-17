@@ -1,0 +1,86 @@
+第二章 SQL基础
+  2.1 SQL简介
+    SQL是Structure Query Language（结构化查询语言）的缩写，它是使用关系模型的数据库应
+    用语言。
+  2.2 （My）SQL使用入门
+    2.2.1 SQL分类
+      - DDL（Data Definition Languages）语句：数据定义语句，这些语句定义了不同的数据
+      段、数据库、表、列、索引等数据库对象的定义。常用关键字包括create、drop、alter等。
+      - DML（Data Manipulation Language）语句：数据操纵语句，用于添加、删除、更新和
+      查询数据库记录，并检查数据完整性。常用的主要包括insert、delete、update和select等。
+      - DCL（Data Control Language）语句：数据控制语句，用于控制不同数据段直接的许可和
+      访问级别的语句。这些语句定义了数据库、表、字段、用户的访问权限和安全级别。主要的语
+      句关键字包括grant、revoke等。
+    2.2.2 DDL语句
+      DDL语句简单说来，就是对数据库内部的对象进行创建、删除、修改的操作语句。它和DML语句
+      的最大区别就是DML只是对表内数据的操作，而不涉及表的定义、结构的修改，更不会设计其它
+      对象。
+    - 创建数据库
+        数据库创建语句：create database 数据库名称 如 create database test
+        - 安装好MySQL就已经存在的数据库
+            - information_schema：主要存储了系统中的一些数据库对象信息，比如用户表信息、
+            列信息、权限信息、字符集信息、分区信息等。
+            - cluster：存储了系统的集群信息。
+            - mysql：存储了系统的用户权限信息。
+        - 选择要操作的数据库
+            use dbname
+            - 查看数据库中所有的数据表：show tables;
+    - 删除数据库
+      语法：drop database dbname;
+    - 创建表
+      基本语法：create table tablename (column_name_1 column_type_1 constraints,
+      column_name_2 column_type_2 constraints, ...column_name_n column_type_n 
+      constraints);
+        - column_name 是列的名字；
+        - column_type 是列的数据类型；
+        - constraints 是列的约束条件。
+        如创建一个名为emp的表：
+          create table emp (ename varchar(10),hiredate date,sale decimal(10,2),
+          deptno int(2));
+        创建完后，查看表的定义：desc tablename；
+    - 删除表
+      语法：drop table tablename;
+    - 修改表
+      表结构的更改一般都使用alter table语句
+      - 修改表类型，语法：
+        alter table tablename modify [column] column_definition 
+        [first | after col_name];
+        如修改表emp字段定义：
+          alter table emp modify ename varchar(20);
+      - 增加表字段，语法：
+        alter table tablename add [column] column_definition 
+        [first | after col_name];
+        如表emp上新增加字段age，类型为int（3）：
+          alter table emp add column age int(3);
+      - 删除表字段，语法：
+        alter table tablename drop [column] col_name;
+        如将字段age删除掉：
+          alter table emp drop column age;
+      - 字段改名，语法：
+        alter table tablename change [column] old_col_name column_definition 
+        [first | after col_name];
+        如将age改名为age1，同时修改字段类型为int(4)：
+          alter table emp change age age1 int(4);
+          * change和modify都可以修改表的定义，不同的是change后面需要写两次列名，不方便。
+          但是change的优点是可以修改列名称，modify则不能。
+      - 修改字段排列顺序
+        前面介绍的字段增加和修改语法（add/change/modify）中，都有一个可选项first|after 
+        column_name,这个选项可以用来修改字段在表中的位置，默认add增加的新字段是加在表的
+        最后位置，而change/modify默认都不会改变字段的位置。
+        * change/first|after column 这些关键字都是属于MySQL在标准SQL上的扩展，在其他数
+        据库上不一定适用。
+      - 修改表名
+        alter table tablename rename [to] new_tablename;
+        如将emp改名为emp1，语法：
+          alter table emp rename emp1;
+    2.2.3 DML语句
+      DML操作是指对数据库中表记录的操作，主要包括表记录的插入（insert）、更新（update）、
+      删除（delete）和查询（select），是开发人员日常使用最频繁的操作。
+      - 插入记录
+        表建好以后，就可以往里插入记录了，基本语法：
+          insert into tablename(field1,field2,...fieldn) values(value1,value2,...
+          valuesn);
+        如向表emp1中插入以下记录，ename为zzx1，hiredate为2000-01-01，sal为2000，deptno
+        为1，命令：
+          insert into emp (ename,hiredate,sal,deptno) values ('zzx1','2000-01-01',
+          '2000',1);
