@@ -111,3 +111,118 @@
             update emp a,dept b set a.sal=a.sal*b.deptno,b.deptname=a.ename 
             where a.deptno=b.deptno;
           * 多表更新的语法更多地用在了根据一个表的字段，来动态地更新另一个表的字段。
+      - 删除记录
+        如果记录不再需要，可以用delete命令进行删除，语法：
+          delete from tablename [where condition];
+          例如，在emp中将ename为'dony'的记录全部删除，命令：
+            delete from emp where ename='dony';
+          在MySQL中可以删除多个表的记录，语法：
+            delete t1,t2,...,tn from t1,t2,...,tn [where condition];
+          如果from后面的表明用别名，则delete后面也要用相应的别名，否则会提示语法错误。
+          例如，将表emp和dept中deptno为3的记录同时删除：
+            delete a,b from emp a,dept b where a.deptno=b.deptno and a.deptno=3;
+            * 不管是单表还是多表，不加where条件将会把表的所有记录删除。
+      - 查询记录   
+        数据插入到数据库中后，就可以用select命令进行各种各样的查询，使得输出的结果符合用户
+        的要求，语法：
+          select * from tablename [where condition]; 或 
+          select ename,hiredate,sal,deptno from emp;
+        - 查询不重复的记录,可以使用distinct关键字来实现：
+          select ename,hiredate,sal,deptno from emp;
+        - 条件查询：
+          用where关键字来实现，限定条件来查询一部分数据。例如，查询所有deptno为1的记录：
+            select * from emp where deptno=1；
+          除了"="之外，还有>、<、>=、<=、!=等比较运算符；多个条件之间还可以使用or、and
+          等逻辑运算符进行多条件联合查询。例如，多字段查询：
+            select * from emp where deptno=1 and sal<3000;
+        - 排序和限制
+          用关键字order by来实现，按照某个字段进行排序后的记录结果集，语法：
+            select * from tablename [where condition] [order by field1 [desc|asc], 
+            field2 [desc|asc], ...fieldn [desc|asc]];
+          其中，desc和asc是排序关键字，desc标识按照字段进行降序排列，asc则表示升序排列，
+          不写关键字默认是升序排列。例如，将emp表中的记录按照工资高低进行显示：
+            select * from emp order by sal;
+          用limit关键字来显示一部分排序后的记录，语法：
+            select ... [limit offset_start,row_count];
+          其中offset_start表示记录的起始偏移量，row_count表示显示的行数，默认情况下，起始
+          偏移量为0，只需要写行数就可以。例如，显示emp表中按照sal排序后的前3条记录：
+            select * from emp order by sal limit 3;
+            如果从第二条记录开始，显示3条记录：
+            select * from emp order by sal limit 1,3;
+          limit经常和order by一起配合使用来进行记录的分页显示。
+          * limit属于MySQL扩展SQL92后的语法，在其他数据库上并不能使用。
+        - 聚合            
+          用户进行一些汇总操作，这时需要用到SQL的聚合操作，语法：
+            select [field1,field2,...fieldn] fun_name
+            from tablename 
+            [where where_condition]
+             [group by field1,field2,...fieldn 
+             [with rollup]]
+             [having where_condition];
+            参数说明：
+              fun_name标识要做的聚合操作，也就是聚合函数，常用的有sum（求和）、count（*）
+              （记录数）、max（最大值）、min（最小值）。
+              group by 关键字表示要进行分类聚合的字段，将字段写在group by后面。
+              with rollup是可选语法，表明是否对分类聚合后的结果进行再汇总。
+              having 关键字表示对分类后的结果再进行条件的过滤。
+              * having和where的区别在于having是对聚合后的结果进行条件的过滤，而where是
+              在聚合前就对记录进行过滤，如果逻辑允许，尽可能用where先过滤记录，这样结果集
+              减小，将对聚合的效率大大提高，最后在根据逻辑看是否用having进行再过滤。
+          例如，要emp表中统计公司的总人数：
+            select count(1) from emp;
+          在此基础上，统计各个部门的人数：
+            select deptno,count(1) from emp group by deptno;
+          既要统计各部门人数，又要统计总人数：
+            select deptno,count(1) from emp group by deptno with rollup;
+          统计人数大于1人的部门：
+            select deptno,count(1) from emp group by deptno having count(1)>1;
+          最后统计公司所有员工的薪水总额、最高和最低薪水：
+            select sum(sal),max(sal),min(sal) from emp;
+        - 表连接    
+          当需要同时显示多个表中的字段时，就可以用表连接来实现这样的功能。
+          从大类上分，表连接分为内连接和外连接，他们之间最大的区别是内连接仅选出两张表
+          中互相匹配的记录，而外连接会选出其它不匹配的记录。
+          例如，查询出所有雇员的名字所在部门的名称：
+            select ename,deptname from emp,dept where emp.deptno=dept.deptno;
+          外连接又分为左连接和右连接，定义：
+            - 左连接：包含所有的左边表中的记录甚至是右边表中没有和它匹配的记录。
+            - 右连接：包含所有的右边表中的记录甚至是左边表中没有和它匹配的记录。
+          例如，查询emp中所有用户和所在部门的名称：
+            select ename,deptname from emp left join dept on 
+            emp.deptno=dept.deptno;
+            或：
+            select ename,deptname from dept right join emp on 
+            dept.deptno = emp.deptno;
+        - 子查询
+          在某些情况下，当进行查询的时候，需要的条件是另外一个select语句的结果，这个时候，
+          就要用到子查询。用于子查询的关键字主要包括in、not in、=、exists、not exists等。
+          例如，从emp表中查询出所有部门在dept表中的所有记录：
+            select * from emp where deptno in (select deptno from dept);
+          *子查询和表连接之间的转换主要应用在两个方面：
+            - MySQL4.1以前的版本不支持子查询，需要用表连接实现子查询的功能。
+            - 表连接在很多情况下用于优化子查询。
+        - 记录联合
+          把两个表的数据按照一定的查询条件查询出来后，将结果合并到一起显示出来，这个时候，
+          就需要union和union all关键字来实现这样的功能，语法：
+            select * from t1
+            union|union all 
+            select * from t2 
+            ...
+            unoin|union all 
+            select * from tn;
+          union和union all的主要区别是，union all把结果集直接合并在一起，而union是将
+          union all后的结果进行一次distinct，取出重复后的结果。
+    2.2.4 DCL语句
+      DCL语句主要是DBA用来管理系统中的对象权限时使用。
+  2.3 帮助的使用
+    2.3.1 按照层次看帮助
+      - 可以用"? contents"命令来显示所有可供查询的分类；
+      - 可以使用"? 类别名称"的方式针对用户感兴趣的内容做进一步的查看；
+        例如：查看MySQL中支持的数据类型，可以用"? data types"命令：
+    2.3.2 快速查阅帮助
+      如果需要快速查阅某项语法时，可以使用关键字进行快速查阅。
+      - 例如，查看show命令的功能："? show";
+      - 查看create table的语法："? create table"。
+3 MySQL支持的数据类型 
+  3.1 数值类型
+    
