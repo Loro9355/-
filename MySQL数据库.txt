@@ -479,4 +479,113 @@
     - version()           返回当前数据库版本
     - user()              返回当前登录用户名
     - password(str)       返回字符串str的加密版本
-    - md5()               返回字符串str的MD5值
+    - md5()               返回字符串str的MD5值 
+7 表类型（存储引擎）的选择
+  7.1 MySQL存储引擎概述
+    MySQL 5.0 支持的存储引擎包括：MyISAM、InnoDB、BDB、MEMORY、MERGE、
+    EXAMPLE、NDB CLuster、ARCHIVE、CSV、BLACKHOLE、FEDERATED等，其中
+    InnoDB和BDB提供事务安全表，其它存储引擎都是非事务安全表。
+    可以通过show variables like 'table_type';查看当前默认的存储引擎。
+    查看当前数据库支持的存储引擎：
+      - show engines \G;
+      - show variables like 'have%';
+      其中value显示为“disabled”的记录表示支持该存储引擎，但是数据库启动
+      的时候被禁用。
+    创建新表的时候，可以通过增加engine关键字设置新建表的存储引擎，例如：
+      - 创建表ai，引擎为MyISAM；表country为InnoDB：
+        create table ai (
+          i bigint(20) not null auto_increment,
+          primary key (i)
+        ) engine=myisam default charset=gbk;
+
+        create table country (
+          country_id smallint unsigned not null auto_increment,
+          country varchar(50) not null,
+          last_update timestamp not null default current_timestamp 
+          on update current_timestamp,
+          primary key (coountry_id)
+        )engine=InnoDB default charset=gbk;
+      - 也可以使用alter table语句，将一个已经存在的表修改成其他存储引擎，例如：
+        alter table ai engine = innodb;
+  7.2 各种存储引擎的特性
+    -    特点        MyISAM       InnoDB      Memory     Merge      NDB
+      存储限制         有           64TB        有         没有       有
+      事务安全                      支持
+      锁机制           表锁         行锁        表锁        表锁      行锁
+      B树索引          支持         支持        支持        支持      支持
+      哈希索引                                  支持                 支持
+      全文索引         支持
+      集群索引                      支持
+      数据缓存                      支持        支持                  支持
+      索引缓存         支持         支持        支持        支持      支持
+      数据可压缩       支持
+      空间使用         低           高          N/A         低        低 
+      内存使用         低           高          中等        低         高 
+      批量插入速度     高           低           高         高         高
+      支持外键                      支持
+    7.2.1 MyISAM 
+      MyISAM 是MySQL的默认存储引擎。MyISAM不支持事务、也比支持外键，其优势是访问
+      速度快，对事务完整性没有要求或者以select、insert为主的应用基本上都可以使用
+      这个引擎来创建表。
+        每个MyISAM在磁盘上存储成3个文件，其文件名都和表明相同，但扩展名分别是：
+          - .frm （存储表定义）
+          - MYD （MYData，存储数据）
+          - MYI （MYIndex，存储索引）
+        数据文件和索引文件可以放置在不同的目录，平均分布IO，获得更快的速度。
+      要指定索引文件和数据文件的路径，需要再创建表的时候通过Data Directory
+      和Index Directory语句指定，即不同MyISAM表的索引文件和数据文件可以放
+      置到不同的路径下。文件需要时绝对路径，并且具有访问权限。
+        MyISAM的表还支持3中不同的存储格式，分别是：
+          - 静态（固定长度）表
+          - 动态表
+          - 压缩表
+        - 其中静态表是默认的存储格式。静态表中的字段都是非变长字段，这样每个记
+          录都是固定长度的，这种存储方式的优点是存储非常迅速，容易缓存，出现故
+          障容易恢复；缺点是占用的空间通常比动态表多。静态表的数据在存储的时候
+          会按照列的宽度定义不足空格，当时在访问的时候并不会得到这些空格，这些
+          空格在返回应用之前已经去掉。
+        - 动态表中包含变长字段，记录是固定不变的，这样存储的优点是占用的空间相
+          对较少，但是频繁的更新删除记录会产生碎片，需要定期执行optimize 
+          table语句或myisamchk -r命令来改善性能，并且出现故障的时候恢复相对
+          比较困难。
+        - 压缩表有myisampack工具创建，占据非常小的磁盘空间。因为每个记录是被
+          单独压缩的，所以只有非常小的访问开支。
+    7.2.2 InnoDB 
+      InnoDB存储引擎提供了具有提交、回滚和崩溃回复能力的事务安全。但是对比
+      MyISAM的存储引擎，InnoDB写的处理效率差一些并且会占用更多的磁盘空间以保留
+      数据和索引。
+      - 自动增长列
+        InnoDB表的自动增长列可以手工插入，但是插入的值如果是空或者0，则实际插入
+        的将是自动增长后的值。例如，定义新表autoincre_demo，其中列i使用自动增
+        长列：
+          create table autoincre_demo 
+          (i smallint not null auto_increment,
+           name varchar(10),primary key(i)
+          )engine=innodb;
+          insert into autoincre_demo values(1,'1'),(0'2'),(null,'3');
+          select * from autoincre_demo;
+          查看自动增长列的处理情况，发现插入0或者实际插入的都将是自动增长后的值。
+        可以通过“alter table xxx auto_increment = n;”语句设置自增长列的初始
+        值，默认从1开始，但是该强制的默认值是保留在内存中的，如果该值在使用之前
+        数据库重新启动，那么这个强制的默认值就会丢失，就需要在数据库启动以后重
+        新设置。可以使用“last_insert_id()”查询当前线程最后插入记录使用的值。
+          对于InnoDB表，自动增长列必须是索引。如果是组合索引，也必须是组合索引的
+        第一列，但是对于MyISAM表，自动增长列可以是组合索引的其它列，这样插入记录
+        后，自动增长列是按照组合索引的前面几列进行排序后递增的。例如，创建一个新
+        的MyISAM类型的表autoincre_demo2，自动增长列d1作为组合索引的第二列，对
+        该表插入插入一些记录后，可以发现自动增长列是按照组合索引的第一列d2进行排
+        列后递增的：
+          create table autoincre_demo2 
+          (d1 smallint not null auto_increment,
+          d2 smallint not null,
+          name varchar(10),
+          index(d2,d1)
+          )engine=myisam;
+          insert into autoincre_demo2 (d2,name) values 
+          (2,'2'),(3,'3'),(4,'4'),(2,'2'),(3,'3'),(4,'4');
+          seelct * from autoincre_demo2;
+      - 外键约束
+          MySQL支持外键的存储引擎只有InnoDB，在创建外键的时候，要求父表必须
+        有对应的索引，子表在创建外键的时候也会自动创建对应的索引。
+          例如：创建两个表，country表是父表，country_id为主键索引，city表是
+        子表，country_id字段对country表的country_id有外键。
