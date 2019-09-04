@@ -589,3 +589,86 @@
         有对应的索引，子表在创建外键的时候也会自动创建对应的索引。
           例如：创建两个表，country表是父表，country_id为主键索引，city表是
         子表，country_id字段对country表的country_id有外键。
+          create table country (
+            country_id smallint unsigned not null auto_increment,
+            country varchar(50) not null,
+            last_update timestamp not null default current_timestamp on 
+            update current_timestamp,
+            primary key(country_id)
+          )engine=innodb default charset=utf8;
+          create table city (
+            city_id smallint unsigned not null auto_increment,
+            city varchar(50) not null,
+            country_id smallint unsigned not null,
+            last_update timestamp not null default current_timestamp
+            on update current_timestamp,
+            primary key (city_id),
+            key idx_fk_country_id (country_id),
+            constraint 'idx_fk_country_id' foreign key (country_id) 
+            references country (country_id) on delete restrict on 
+            update cascade
+          )engine=InnoDB default charset=utf8;
+          在创建索引的时候，可以指定在删除、更新父表时，对子表进行的相应操作，包
+        括restrict、cascade、set null和no action。其中restrict和no action相
+        同，是指限制在子表有关联记录的情况下父表不能更新；cascade表示父表在更新
+        或者删除时，更新或者删除子表对应记录；set null则表示父表在更新或者删除的
+        时，子表的对应字段被set null。选择后两种方式的时候要谨慎，可能会因为错误
+        的操作导致数据的丢失。例如上面创建的两个表，子表的外键指定是on delete 
+        restrict on update cascade方式的，那么在主表删除记录时，如果子表有对应
+        记录，则不允许删除，主表更新记录时，如果子表有对应记录，则子表对应更新。
+          当某个表被其他表创建了外键参照，那么该表的对应索引或者主键禁止被删除。
+          当导入多个表的数据时，如果需要忽略表之前的导入顺序，可以暂时关闭外键的
+        检查；同样，在执行load data和alter table操作的时候，可以通过暂时关闭外
+        键约束来暂时加快处理的速度，关闭的命令是“set foreign_key_checks=0;”，
+        执行完成后，通过执行“select foreign_key_checks=1;”语句改回原状态。
+          对于InnoDB类型的表，外键的信息通过使用show create table或者show 
+        table status命令都可以显示。
+      - 存储方式
+        - 使用共享表空间存储，这种方式创建的表的结构保存在.frm文件中，数据和索引
+          保存在innodb_data_dir和innodb_data_file_path定义的表空间中，可以是
+          多个文件。
+        - 使用多表空间存储，这种方式创建的表的表结构仍然保存在.frm文件中，但是每
+          个表的数据和索引单独保存在.ibd中。如果是个分区表，则每个分区对应单独的
+          .ibd文件，文件名是“表名+分区名”，可以再创建分区的时候指定每个分区的数
+          据文件的位置，以此来将表的IO均匀分布在多个磁盘上。
+        要使用多表空间的存储方式，需要设置参数innodb_file_per_table，并重新启动
+        服务后才可以生效，对于新建的表按照多表空间的方式创建，已有的表仍然使用共
+        享表空间存储。如果将已有的多表空间方式修改回共享表空间的方式，则新建表会
+        在共享表空间中创建，但已有的多表空间的表仍然保存原来的访问方式。所以多表
+        空间的参数生效后，只对新建的表生效。
+          多表空间的数据文件没有大小限制，不需要设置初始大小，也不需要设置文件的
+        最大限制、扩展大小等参数。
+          对于使用多表空间特性的表，可以比较方便地进行单表备份和回复操作，但是直
+        接复制.ibd文件是不行的，因为没有共享表空间的数据字典信息，直接复制的.ibd
+        文件和.frm文件恢复时是不能被正确认识的，但可以通过以下命令：
+          alter table tb1_name discard tablespace;
+          alter table tb1_name import tablespace;
+          将备份恢复到数据库中，但是这样备份的单表备份，只能恢复到表原来在的数据
+        库中，而不能恢复到其他的数据库中。如果要将单表恢复到目标数据库，则需要通
+        过mysqldump和mysqlimport来实现。
+        * 即便在多表空间的存储方式下，共享表空间仍然是必须的，InnoDB把内部数据词
+          典和未作日志放在这个文件中。
+    7.2.3 Memory 
+        memory存储引擎使用存在内存中的内容创建表。每个memory表只实际对应一个磁盘
+      文件，格式是.frm。memory类型的表访问非常快，因为它的数据是放在内存中的，并
+      且默认使用hash索引，但是一旦服务关闭，表中的数据就会丢失掉。 
+    7.2.4 Merge
+        merge存储引擎是一组myisam表的组合，这些myisam表必须是结构完全相同的，
+      merge本身并没有数据，对merge类型的表可以进行查询、更新、删除的操作，这些操
+      作实际上是对内部的实际的myisam表进行的。对于merge类型表的插入操作，是通过
+      insert_method子句定义插入的表，可以有三个不同的值，使用first或last值使得
+      插入操作被相应地作用在第一或最后一个表上，不定义这个子句或者定义为no，表示
+      不能对这个merge表执行插入操作。
+  7.3 如何选择合适的存储引擎
+      在选择存储引擎时，应根据应用特点选择适合的存储引擎，对于复杂的应用系统可以
+    根据实际情况选择多种存储引擎进行组合。
+      - MyISAM：默认的MySQL插件式存储引擎。如果应用是以读操作和插入操作为主，只有
+        很少的更新和删除操作，并且对事务的完整性、并发性要求不是很高，那么选择这个
+        存储引擎是非常合适的。MyISAM是在web、数据仓储和其它应用环境下最常使用的存
+        储引擎之一。
+      - InnoDB：用于事务处理应用程序，支持外键。如果应用对事务的完整性有比较高的要
+        求，在并发条件下要求数据的一致性，数据操作除了插入和查询以外，还包括很多的
+        更新、删除操作，那么InnoDB存储引擎应该是比较合适的选择。InnoDB存储引擎除了
+        有效地降低由于删除和更新导致的锁定，还可以确保事务的完整提交(commit)和回滚
+        (rollback)，对于类似计费系统或者财务系统等对数据准确性要求比较高的系统，
+        InnoDB都是合适的选择。
