@@ -1,0 +1,674 @@
+﻿第二章 SQL基础
+  2.1 SQL简介
+    SQL是Structure Query Language（结构化查询语言）的缩写，它是使用关系模型的数据库应
+    用语言。
+  2.2 （My）SQL使用入门
+    2.2.1 SQL分类
+      - DDL（Data Definition Languages）语句：数据定义语句，这些语句定义了不同的数据
+      段、数据库、表、列、索引等数据库对象的定义。常用关键字包括create、drop、alter等。
+      - DML（Data Manipulation Language）语句：数据操纵语句，用于添加、删除、更新和
+      查询数据库记录，并检查数据完整性。常用的主要包括insert、delete、update和select等。
+      - DCL（Data Control Language）语句：数据控制语句，用于控制不同数据段直接的许可和
+      访问级别的语句。这些语句定义了数据库、表、字段、用户的访问权限和安全级别。主要的语
+      句关键字包括grant、revoke等。
+    2.2.2 DDL语句
+      DDL语句简单说来，就是对数据库内部的对象进行创建、删除、修改的操作语句。它和DML语句
+      的最大区别就是DML只是对表内数据的操作，而不涉及表的定义、结构的修改，更不会设计其它
+      对象。
+    - 创建数据库
+        数据库创建语句：create database 数据库名称 如 create database test
+        - 安装好MySQL就已经存在的数据库
+            - information_schema：主要存储了系统中的一些数据库对象信息，比如用户表信息、
+            列信息、权限信息、字符集信息、分区信息等。
+            - cluster：存储了系统的集群信息。
+            - mysql：存储了系统的用户权限信息。
+        - 选择要操作的数据库
+            use dbname
+            - 查看数据库中所有的数据表：show tables;
+    - 删除数据库
+      语法：drop database dbname;
+    - 创建表
+      基本语法：create table tablename (column_name_1 column_type_1 constraints,
+      column_name_2 column_type_2 constraints, ...column_name_n column_type_n 
+      constraints);
+        - column_name 是列的名字；
+        - column_type 是列的数据类型；
+        - constraints 是列的约束条件。
+        如创建一个名为emp的表：
+          create table emp (ename varchar(10),hiredate date,sale decimal(10,2),
+          deptno int(2));
+        创建完后，查看表的定义：desc tablename；
+    - 删除表
+      语法：drop table tablename;
+    - 修改表
+      表结构的更改一般都使用alter table语句
+      - 修改表类型，语法：
+        alter table tablename modify [column] column_definition 
+        [first | after col_name];
+        如修改表emp字段定义：
+          alter table emp modify ename varchar(20);
+      - 增加表字段，语法：
+        alter table tablename add [column] column_definition 
+        [first | after col_name];
+        如表emp上新增加字段age，类型为int（3）：
+          alter table emp add column age int(3);
+      - 删除表字段，语法：
+        alter table tablename drop [column] col_name;
+        如将字段age删除掉：
+          alter table emp drop column age;
+      - 字段改名，语法：
+        alter table tablename change [column] old_col_name column_definition 
+        [first | after col_name];
+        如将age改名为age1，同时修改字段类型为int(4)：
+          alter table emp change age age1 int(4);
+          * change和modify都可以修改表的定义，不同的是change后面需要写两次列名，不方便。
+          但是change的优点是可以修改列名称，modify则不能。
+      - 修改字段排列顺序
+        前面介绍的字段增加和修改语法（add/change/modify）中，都有一个可选项first|after 
+        column_name,这个选项可以用来修改字段在表中的位置，默认add增加的新字段是加在表的
+        最后位置，而change/modify默认都不会改变字段的位置。
+        * change/first|after column 这些关键字都是属于MySQL在标准SQL上的扩展，在其他数
+        据库上不一定适用。
+      - 修改表名
+        alter table tablename rename [to] new_tablename;
+        如将emp改名为emp1，语法：
+          alter table emp rename emp1;
+    2.2.3 DML语句
+      DML操作是指对数据库中表记录的操作，主要包括表记录的插入（insert）、更新（update）、
+      删除（delete）和查询（select），是开发人员日常使用最频繁的操作。
+      - 插入记录
+        表建好以后，就可以往里插入记录了，基本语法：
+          insert into tablename(field1,field2,...fieldn) values(value1,value2,...
+          valuesn);
+        如向表emp1中插入以下记录，ename为zzx1，hiredate为2000-01-01，sal为2000，deptno
+        为1，命令：
+          insert into emp (ename,hiredate,sal,deptno) values ('zzx1','2000-01-01',
+          '2000',1);
+        或不指定字段名称：
+          insert into emp values ('lisa','2003-02-01','3000',2);
+        或含可控字段、非空但是含有默认值的字段、自增字段，可以不用在insert后的字段列表里面
+        出现，values后面只写对应字段的value。这些没写的字段可以自动设置为NULL、默认值、自
+        增的下一个数字，如：
+          insert into emp (ename,sal) values ('dony',1000); 
+        在MySQL中，insert可以一次性插入多条记录，语法：
+          insert into tablename （field1, field2, ...fieldn)
+          values 
+          (record1_value1, record1_value2, ...record1_valuen),
+          (record2_value1, record2_value2, ...record2_valuen),
+          ...
+          (recordn_value1, recordn_value2, ...recordn_valuen);
+      - 更新记录
+        表里的记录值可以通过update命令进行修改，语法：
+          update tablename set field1=value1, field2=value2,
+          ...fieldn=valuen [where condition]
+          如：
+            将表emp中ename为"lisa"的薪水（sal）改为4000：
+              update emp set sal=4000 where ename='lisa';
+        在MySQL中，update命令可以同时更新多个表中数据，语法：
+          update t1,t2,...,tn set t1.field1=expr1,...,tn.fieldn=exprn 
+          [where condition]
+          如同时更新表emp中的字段sal和表dept中的字段deptname：
+            update emp a,dept b set a.sal=a.sal*b.deptno,b.deptname=a.ename 
+            where a.deptno=b.deptno;
+          * 多表更新的语法更多地用在了根据一个表的字段，来动态地更新另一个表的字段。
+      - 删除记录
+        如果记录不再需要，可以用delete命令进行删除，语法：
+          delete from tablename [where condition];
+          例如，在emp中将ename为'dony'的记录全部删除，命令：
+            delete from emp where ename='dony';
+          在MySQL中可以删除多个表的记录，语法：
+            delete t1,t2,...,tn from t1,t2,...,tn [where condition];
+          如果from后面的表明用别名，则delete后面也要用相应的别名，否则会提示语法错误。
+          例如，将表emp和dept中deptno为3的记录同时删除：
+            delete a,b from emp a,dept b where a.deptno=b.deptno and a.deptno=3;
+            * 不管是单表还是多表，不加where条件将会把表的所有记录删除。
+      - 查询记录   
+        数据插入到数据库中后，就可以用select命令进行各种各样的查询，使得输出的结果符合用户
+        的要求，语法：
+          select * from tablename [where condition]; 或 
+          select ename,hiredate,sal,deptno from emp;
+        - 查询不重复的记录,可以使用distinct关键字来实现：
+          select ename,hiredate,sal,deptno from emp;
+        - 条件查询：
+          用where关键字来实现，限定条件来查询一部分数据。例如，查询所有deptno为1的记录：
+            select * from emp where deptno=1；
+          除了"="之外，还有>、<、>=、<=、!=等比较运算符；多个条件之间还可以使用or、and
+          等逻辑运算符进行多条件联合查询。例如，多字段查询：
+            select * from emp where deptno=1 and sal<3000;
+        - 排序和限制
+          用关键字order by来实现，按照某个字段进行排序后的记录结果集，语法：
+            select * from tablename [where condition] [order by field1 [desc|asc], 
+            field2 [desc|asc], ...fieldn [desc|asc]];
+          其中，desc和asc是排序关键字，desc标识按照字段进行降序排列，asc则表示升序排列，
+          不写关键字默认是升序排列。例如，将emp表中的记录按照工资高低进行显示：
+            select * from emp order by sal;
+          用limit关键字来显示一部分排序后的记录，语法：
+            select ... [limit offset_start,row_count];
+          其中offset_start表示记录的起始偏移量，row_count表示显示的行数，默认情况下，起始
+          偏移量为0，只需要写行数就可以。例如，显示emp表中按照sal排序后的前3条记录：
+            select * from emp order by sal limit 3;
+            如果从第二条记录开始，显示3条记录：
+            select * from emp order by sal limit 1,3;
+          limit经常和order by一起配合使用来进行记录的分页显示。
+          * limit属于MySQL扩展SQL92后的语法，在其他数据库上并不能使用。
+        - 聚合            
+          用户进行一些汇总操作，这时需要用到SQL的聚合操作，语法：
+            select [field1,field2,...fieldn] fun_name
+            from tablename 
+            [where where_condition]
+             [group by field1,field2,...fieldn 
+             [with rollup]]
+             [having where_condition];
+            参数说明：
+              fun_name标识要做的聚合操作，也就是聚合函数，常用的有sum（求和）、count（*）
+              （记录数）、max（最大值）、min（最小值）。
+              group by 关键字表示要进行分类聚合的字段，将字段写在group by后面。
+              with rollup是可选语法，表明是否对分类聚合后的结果进行再汇总。
+              having 关键字表示对分类后的结果再进行条件的过滤。
+              * having和where的区别在于having是对聚合后的结果进行条件的过滤，而where是
+              在聚合前就对记录进行过滤，如果逻辑允许，尽可能用where先过滤记录，这样结果集
+              减小，将对聚合的效率大大提高，最后在根据逻辑看是否用having进行再过滤。
+          例如，要emp表中统计公司的总人数：
+            select count(1) from emp;
+          在此基础上，统计各个部门的人数：
+            select deptno,count(1) from emp group by deptno;
+          既要统计各部门人数，又要统计总人数：
+            select deptno,count(1) from emp group by deptno with rollup;
+          统计人数大于1人的部门：
+            select deptno,count(1) from emp group by deptno having count(1)>1;
+          最后统计公司所有员工的薪水总额、最高和最低薪水：
+            select sum(sal),max(sal),min(sal) from emp;
+        - 表连接    
+          当需要同时显示多个表中的字段时，就可以用表连接来实现这样的功能。
+          从大类上分，表连接分为内连接和外连接，他们之间最大的区别是内连接仅选出两张表
+          中互相匹配的记录，而外连接会选出其它不匹配的记录。
+          例如，查询出所有雇员的名字所在部门的名称：
+            select ename,deptname from emp,dept where emp.deptno=dept.deptno;
+          外连接又分为左连接和右连接，定义：
+            - 左连接：包含所有的左边表中的记录甚至是右边表中没有和它匹配的记录。
+            - 右连接：包含所有的右边表中的记录甚至是左边表中没有和它匹配的记录。
+          例如，查询emp中所有用户和所在部门的名称：
+            select ename,deptname from emp left join dept on 
+            emp.deptno=dept.deptno;
+            或：
+            select ename,deptname from dept right join emp on 
+            dept.deptno = emp.deptno;
+        - 子查询
+          在某些情况下，当进行查询的时候，需要的条件是另外一个select语句的结果，这个时候，
+          就要用到子查询。用于子查询的关键字主要包括in、not in、=、exists、not exists等。
+          例如，从emp表中查询出所有部门在dept表中的所有记录：
+            select * from emp where deptno in (select deptno from dept);
+          *子查询和表连接之间的转换主要应用在两个方面：
+            - MySQL4.1以前的版本不支持子查询，需要用表连接实现子查询的功能。
+            - 表连接在很多情况下用于优化子查询。
+        - 记录联合
+          把两个表的数据按照一定的查询条件查询出来后，将结果合并到一起显示出来，这个时候，
+          就需要union和union all关键字来实现这样的功能，语法：
+            select * from t1
+            union|union all 
+            select * from t2 
+            ...
+            unoin|union all 
+            select * from tn;
+          union和union all的主要区别是，union all把结果集直接合并在一起，而union是将
+          union all后的结果进行一次distinct，取出重复后的结果。
+    2.2.4 DCL语句
+      DCL语句主要是DBA用来管理系统中的对象权限时使用。
+  2.3 帮助的使用
+    2.3.1 按照层次看帮助
+      - 可以用"? contents"命令来显示所有可供查询的分类；
+      - 可以使用"? 类别名称"的方式针对用户感兴趣的内容做进一步的查看；
+        例如：查看MySQL中支持的数据类型，可以用"? data types"命令：
+    2.3.2 快速查阅帮助
+      如果需要快速查阅某项语法时，可以使用关键字进行快速查阅。
+      - 例如，查看show命令的功能："? show";
+      - 查看create table的语法："? create table"。
+3 MySQL支持的数据类型 
+  3.1 数值类型
+    - 整数类型
+      - tinyint 1字节 有符号：-128~127 无符号：0~255
+        即  有符号：-2**7 ~ 2**7-1 无符号：0~2**8-1
+      - smallint 2字节 有符号-32768~32767 无符号：0~65535
+        即 有符号 -2**15 ~ 2**15-1 无符号：0~2*16-1
+      - mediumint 3字节 有符号-8388608~8388607 无符号：0~1677215
+        即 有符号：-2**23 ~ 2**23-1 无符号：0~2**24
+      - int、integer 4字节 有符号-2147483648~2147483647 无符号：0~4294967295
+        即 有符号：-2**31 ~ 2**31-1 无符号：0 ~ 2**32-1
+      - bigint 8字节 有符号：-2**63 ~ 2**63-1 有符号：0~2**64-1
+    - 浮点数类型
+      - float 4字节 区间：±1.175494351E-38 ~ ±3.402823466E+38
+      - Double 8字节 区间：±2.2250738585072014E-308 ~ ±1.7976931348623157E+308
+      - dec(m,d),decimal(m,d) 最大取值范围与double相同，给定decimal的有效值范围
+        由m和d决定。
+    - 位类型
+      - bit(m) 1~8字节 区间：bit(1)~bit(64)
+    - 对于整数类型，MySQL还支持在类型名称后面的小括号内指定显示宽度，如int(5)表示当数值
+    宽度小于5位的时候在数值前面填满宽度，如果不显示宽度则默认为int(11)。一般配合zerofill
+    使用，表示在数字位数不够的空间用字符'0'填满。  
+    - 另外，整数类型还有一个属性：auto_increment。在需要产生唯一标识符或顺序值时，可利用
+    此属性，这个属性只属于整数类型。auto_increment值一般从1开始，每行增加1。一个表中最多
+    只能有一个auto_increment的列，对于任何想要使用auto_increment的列，应该定义为not 
+    null，并定义为primary key或unique键。
+  3.2 日期时间类型
+    - date 4字节 区间：1000-01-01 ~ 9999-12-31
+    - datetime 8字节 区间：1000-01-01 00:00:00 ~ 9999-12-31 23:59:59
+    - timestamp 4字节 区间：19700101080001 ~ 2038年的某个时刻
+    - time 3字节 区间：-838:59:59 ~ 838:59:59
+    - year 1字节 区间：1901 ~ 2155
+  3.3 字符串类型
+    - char(m) 字节m m为0~255之间的整数
+    - varchar(m) 字节m m为0~65535之间的整数，值的长度+1个字节
+    - tinyblob 允许长度0~255字节，值的长度+1个字节
+    - blob 允许长度0~65535字节，值的长度+2个字节
+    - mediumblob 允许长度0~167772150字节，值的长度+3个字节
+    - longblob 允许长度0~4294967295，值的长度+2个字节
+    - tinytext 允许长度0~255字节，值的长度+2个字节
+    - text 允许长度0~65535字节，值的长度+2个字节
+    - mediumtext 允许长度0~167772150字节，值的长度+3个字节
+    - longtext 允许长度0~4294967295字节，值的长度+4个字节
+    - varbinary(m) 允许长度0~m个字节的变长字节字符串，值的长度+1个字节
+    - binary(m) 字节m 允许长度0~m个字节的定长字节字符串
+    3.3.1 char和varchar类型
+      两者主要区别：char列的长度固定为创建时声明的长度，长度可以为从0~255的任何值；而
+      varchar列中的值为可变长字符串，长度可以指定为0~255(5.0.3以前)或者65535(5.0.3
+      以后)之间的值。在检索时，char列删除了尾部的空格，而varchar则保留这些空格。例如：
+      给表vc中的varchar(4)和char(4)字段插入相同的字符串来描述这个区别。
+        - 创建测试表vc，并定义两个字段v varchar(4) 和 c char(4)：
+          create table vc (v varchar(4), c char(4));
+        - v和c列中同时插入字符串"ab"：
+          insert into vc values ('ab  ', 'ab  ');
+        - 显示查询结果：
+          select length(v),length(c) from vc;
+          显示结果发现，c字段的length只有2。给两个字段分别追加一个‘+’字符
+          select concat(v, '+'), concat(c, '+') from vc;
+          可看出char列最后的空格在操作时都已经被删除，而varchar依然保留空格。
+    3.3.2 binary和varbinary类型
+      binary和varbinary类似于char和varchar，不同的是他们包含二进制字符串而不包含
+      非二进制字符串。
+    3.3.3 enum类型
+      enum中文名叫枚举类型，它的值范围需要再创建表时通过枚举方式显式指定，对1~255个
+      成员的枚举需要1个字节存储；对于255~65535个成员，需要2个字节存储，最多允许有
+      65535个成员。
+        - 创建测试表t，定义gender字段为枚举类型，成员为'M'和'F'：
+          create table t (gender enum('M','F'));
+        - 插入4条不同的记录：
+          insert into t values ('M'),('1'),('f'),(NULL);
+        从例子中，可以看出enum类型是忽略大小写的，对'M'、'f'在存储时都将他们转成了
+        大写；对于插入不在enum指定范围内的值时，并没有返回警告，而是直接插入
+        enum('M','F')的第一个值'M'；enum类型只允许从值集合中选取单个值，不能一次
+        取多个值。
+    3.3.4 set类型
+      set和enum类型非常相似，也是一个字符串对象，里面可以包含0~64个成员。根据成员的
+      不同，存储上也有所不同：
+        - 1~8成员的集合，占1个字节；
+        - 9~16成员的集合，占2个字符
+        - 17~24成员的集合，占3个字节
+        - 25~32成员的集合，占4个字节
+        - 33~64成员的集合，占8个字节
+      enum一次只能选取一个成员，而set可以一次选取多个成员。例如：
+        create table t (col set ('a', 'b', 'c', 'd'));
+        insert into t values ('a,b'), ('a,d,a'), ('a,b'), ('a,c'), ('a');
+        select * from t;
+      set类型可以从允许值集合中选择任意1个或多个元素进行组合，所以对于输入的值只要是
+      在允许值的组合范围内，都可以正确地注入到set类型的列中。
+4. MySQL中的运算符
+  4.1 算术运算符
+    MySQL支持的算术运算符：
+      - 加法（+）、减法（-）、乘法（*）、除法（/，DIV）、求余（%，MOD）
+        除法运算和模运算中，如果除数为0，将是非法除数，返回结果为NULL。
+        模运算中a%b可以表示为mod(a,b)。
+  4.2 比较运算符
+    - 等于（=）、不等于（<>,!=）、NULL安全的等于【NULL-safe】(<=>)、小于（<）、
+      小于等于（<=）、大于（>）、大于等于（>=）、存在于指定范围（between）、
+      存在于指定集合（in）、为NULL（is NULL）、不为NULL（is not NULL）、通配符
+      匹配（LIKE）、正则表达式匹配（REGEXP或RLIKE）
+    比较运算符可以用于比较数字、字符串和表达式。数字作为浮点数比较，而字符串以不区分
+    大小写的方式进行比较。例如：
+      - “=”运算符，用于比较运算符两侧的操作数是否相等，如果相等返回值为1，否则为0。
+        null不能用于“=”比较。
+      - “<>”运算符，如果两侧操作数不等，则值为1，否则为0。NULL不能用于“<>”比较。
+      - “<=>”安全的等于运算符，在操作数相等时值为1，不等时为0，操作数的值为NULL
+        也可以正确比较。
+      - “<”运算符，当左侧操作数小于右侧操作数时，其返回值为1，否则其值为0。
+      - “<=”运算符，当左侧操作数小于等于右侧操作数时，其返回值为1，否则返回值为0。
+      - “>”运算符，当左侧操作数大于右侧操作数时，其返回值为1，否则返回值为0。
+      - “>=”运算符，当左侧操作数大于等于右侧操作数时，其返回值为1，否则返回值为0。
+      - “between”运算符的使用格式为“a between min and max”,当a大于等于min并且小于
+      等于max，则返回1，否则返回0；当操作数类型相同时，此表达式等价于（a>=min and 
+      a<max），当操作数类型不同时，比较时会遵循类型转换原则进行转换后，在进行比较运算。
+      - “in”运算符的使用格式为“a in (value1,value2,...,valuen)”，当a的值存在于列表
+      中时，则整个比较表达式返回的值为1，否则返回0。
+      - “is null”运算符的使用格式为“a is null”，当a的值为null，则返回值为1，否则返回
+      0。
+      - “is not null”运算符的使用格式为“a is not null”，当a的值不为null，则返回值为
+      1，否则返回0。
+      - “like”运算符的使用格式为“a like %123%”，当a中含有字符串“123”时，则返回值为1，
+      否则返回0。
+      - “regexp”运算符的使用格式为“str regexp str_pat”，当str字符串中含有str_pat相
+      匹配的字符串时，则返回值为1，否则返回0。
+  4.3 逻辑运算符
+    逻辑运算符又称为布尔运算符，用来确认表达式的真和假。
+    - 逻辑非（not 或 !）、逻辑与（and 或 &&）、逻辑或（or或||）、逻辑异或（xor）
+    例如：
+      - “not”或“!”表示逻辑非，返回和操作符相反的结果，当操作数为0（假），则返回值为1，
+      否则返回0，not null的返回值为null。
+      - “and”或“&&”表示逻辑与运算。当所有操作数均为非零值并且不为null时，计算所得结果
+      为1，当一个或多个操作数为0时，所得结果为0，操作数中有任何一个为null则返回值为
+      null。
+      - “xor”表示逻辑异或。当任意一个操作数为null时，返回值为null。对于非null的操作数，
+      如果两个的逻辑真假值不同，则返回值为1，否则返回0。
+  4.4 位运算符
+    位运算是将给定的操作数转化为二进制后，对各个操作数每一位都进行制定的逻辑运算符，得到
+    的二进制结果转换为十进制数后就是位运算的结果。
+    - 位与（&）、位或（|）、位异或（^）、位取反（~）、位右移（>>）、位左移（<<）
+    例如：
+      - “位与”对多个操作数的二进制数位做逻辑与操作。
+      - “位或”对多个操作数的二进制位做逻辑或操作。
+      - “位异或”对操作数的二进制数位做异或操作。
+      - “位取反”对操作数的二进制位做not操作。
+      - “位右移”多左操作数向右移动右操作数指定的位数。
+      - “位左移”对左移操作数向左移动右操作数指定的位数。
+  4.5 运算符的优先级
+    - 优先级顺序         运算符
+          1               :=
+          2               ||,or,xor
+          3               &&,and
+          4               not 
+          5               between,case,when,then,else
+          6               =,<=>,>=,>,<>,<=,<,!=,is,like,regexp,in
+          7               |
+          8               &
+          9               <<,>>
+          10              -,+
+          11              *,/,div,%,mod
+          12              ^
+          13              -(一元减号)，~（一元比特反转）
+          14              !
+5 常用函数
+  5.1 字符串函数
+    - concat(s1,s2,...,sn)函数：把传入的参数连接成一个字符串。
+    - insert(str,x,y,instr)函数：将字符串str从第x位置开始，y个字符长的子串替换为
+      字符串instr。
+    - lower(str)和upper(str)函数：将字符串转换成小写或大写。
+    - left(str,x)和right(str,x)函数：分别返回字符串最左边的x个字符和最右边的x个字
+      符。如果第二个参数是null，那么将不返回任何字符串。
+    - lpad(str,n,pad)和rpad(str,n,pad)函数：用字符串pad对str最左边和最右边进行填
+      充，直到长度为n个字符长度。
+    - ltrim(str)和rtrim(str)函数：去掉字符串str左侧和右侧空格。
+    - repeat(str,x)函数：返回str重复x次的结果。
+    - replace(str,a,b)函数：用字符串b替换字符串str中所有出现的字符串a。
+    - strcmp(s1,s2)函数：比较字符串s1和s2的ASCII码值的大小。
+    - trim(str)函数：去掉目标字符串的开头和结尾的空格。
+    - substring(str,x,y)函数：返回从字符串中的第x位置起y个字符长度的字符串。
+  5.2 数值函数
+    - abs(x)函数：返回x的绝对值。
+    - ceil(x)函数：返回大于x的最小整数。
+    - floor(x)函数：返回小于x的最大整数。
+    - mod(x,y)函数：返回x%y的模。
+    - rand()函数：返回0~1内的随机值。
+    - round(x,y)函数：返回参数x的四舍五入的有y位小数的值。
+    - truncate(x,y)函数：返回数字x截断为y位小数的结果。
+  5.3 日期和时间函数
+    - curdate()函数：返回当前日期，只包含年月日。
+    - curtime()函数：返回当前时间，只包含时分秒。
+    - now()函数：返回当前的日期和时间，年月日时分秒。
+    - unix_timestamp(date)函数：返回日期date的Unix时间戳。
+    - from_unixtime(unixtime)函数：返回unixtime时间戳的日期值，和
+      unix_timestamp(date)互为逆操作。
+    - week(date)和year(date)函数：前者返回所给时间的日期是一年中的第几周，后者
+      返回所给的日期是哪一年。
+    - hour(time)和minute(time)函数：前者返回所给时间的小时，后者返回所给时间的分钟。
+    - monthname(date)函数：返回date的英文月份名称。
+    - date_format(date,fmt)函数：按字符串fmt格式化日期date值，此函数能按照指定的
+      格式显示日期。
+      - %S,%s   两位数字形式的秒(00,01,...,59)
+      - %i      两位数字形式的分(00,01,...,59)
+      - %H      两位数字形式的小时，24小时(00,01,...,23)
+      - %h,%I   两位数字形式的小时，12小时(01,02,...,12)
+      - %k      数字形式的小时，24小时(0,1,...,23)
+      - %l      数字形式的小时，12小时(1,2,...,12)
+      - %T      24小时的时间形式(hh:mm:ss)
+      - %r      12小时的时间形式(hh:mm:ssAM或hh:mm:ssPM)
+      - %p      AM或PM
+      - %W      一周中每一天的名称(Sunday,Monday,...,Saturday)
+      - %a      一周中每一天名称的缩写(Sun,Mon,...,Sat)
+      - %d      两位数字表示月中的天数(00,01,...,31)
+      - %e      数字形式表示月中的天数(1,2,...,31)
+      - %D      英文后缀表示月中的天数(1st,2nd,3rd,...)
+      - %w      以数字形式表示周中的天数(0=Sunday,1=Monday,...,6=Saturday)
+      - %j      以3位数字表示年中的天数(001,002,...,366)
+      - %U      周(0,1,...,52)，其中Sunday为周中的第一天
+      - %u      周(0,1,52)，其中Monday为周中的第一天
+      - %M      月名(January，February,...,December)
+      - %b      缩写的月名(Jan,Feb,...,Dec)
+      - %m      两位数字表示的月份(01,02,...,12)
+      - %c      数字表示的月份(1,2,...,12)
+      - %Y      4位数字表示的年份
+      - %y      两位数字表示的年份
+      - %%      直接值"%"
+    - date_add(date,interval expr type)函数：返回与所给日期date相差interval时间
+      段的日期。
+      - 时间间隔类型
+        - 表达式类型          描述         格式
+            hour             小时          hh
+            minute           分            mm
+            second           秒            ss
+            year             年            YY
+            month            月            MM
+            day              日            DD
+            year_month       年和月        YY-MM
+            day_hour         日和小时      DD hh
+            day_minute       日和分钟      DD hh:mm
+            day_second       日和秒        DD hh:mm:ss
+            hour_minute      小时和分      hh:mm
+            hour_second      小时和秒      hh:ss
+            minute_second    分钟和秒      mm:ss
+    - datediff(date1,date2)函数：用来计算两个日期之间相差的天数。
+  5.4 流程函数
+    流程函数的作用：在一个SQL语句中实现条件选择，提高语句的效率。
+    - if(value,t f)         
+      如果value是真，返回t;否则返回f
+    - ifnull(value1,value2)
+      如果value1不为空返回value1,否则返回value2
+    - case when [value1] then [result] ... else [default] end
+      如果value1是真，返回result1,否则返回default
+    - case [expr] when [value1] then [result] ... else [default] end
+      如果expr等于value1，返回result1，否则返回default
+  5.5 其它常用函数
+    - database()          返回当前数据库名
+    - version()           返回当前数据库版本
+    - user()              返回当前登录用户名
+    - password(str)       返回字符串str的加密版本
+    - md5()               返回字符串str的MD5值 
+7 表类型（存储引擎）的选择
+  7.1 MySQL存储引擎概述
+    MySQL 5.0 支持的存储引擎包括：MyISAM、InnoDB、BDB、MEMORY、MERGE、
+    EXAMPLE、NDB CLuster、ARCHIVE、CSV、BLACKHOLE、FEDERATED等，其中
+    InnoDB和BDB提供事务安全表，其它存储引擎都是非事务安全表。
+    可以通过show variables like 'table_type';查看当前默认的存储引擎。
+    查看当前数据库支持的存储引擎：
+      - show engines \G;
+      - show variables like 'have%';
+      其中value显示为“disabled”的记录表示支持该存储引擎，但是数据库启动
+      的时候被禁用。
+    创建新表的时候，可以通过增加engine关键字设置新建表的存储引擎，例如：
+      - 创建表ai，引擎为MyISAM；表country为InnoDB：
+        create table ai (
+          i bigint(20) not null auto_increment,
+          primary key (i)
+        ) engine=myisam default charset=gbk;
+
+        create table country (
+          country_id smallint unsigned not null auto_increment,
+          country varchar(50) not null,
+          last_update timestamp not null default current_timestamp 
+          on update current_timestamp,
+          primary key (coountry_id)
+        )engine=InnoDB default charset=gbk;
+      - 也可以使用alter table语句，将一个已经存在的表修改成其他存储引擎，例如：
+        alter table ai engine = innodb;
+  7.2 各种存储引擎的特性
+    -    特点        MyISAM       InnoDB      Memory     Merge      NDB
+      存储限制         有           64TB        有         没有       有
+      事务安全                      支持
+      锁机制           表锁         行锁        表锁        表锁      行锁
+      B树索引          支持         支持        支持        支持      支持
+      哈希索引                                  支持                 支持
+      全文索引         支持
+      集群索引                      支持
+      数据缓存                      支持        支持                  支持
+      索引缓存         支持         支持        支持        支持      支持
+      数据可压缩       支持
+      空间使用         低           高          N/A         低        低 
+      内存使用         低           高          中等        低         高 
+      批量插入速度     高           低           高         高         高
+      支持外键                      支持
+    7.2.1 MyISAM 
+      MyISAM 是MySQL的默认存储引擎。MyISAM不支持事务、也比支持外键，其优势是访问
+      速度快，对事务完整性没有要求或者以select、insert为主的应用基本上都可以使用
+      这个引擎来创建表。
+        每个MyISAM在磁盘上存储成3个文件，其文件名都和表明相同，但扩展名分别是：
+          - .frm （存储表定义）
+          - MYD （MYData，存储数据）
+          - MYI （MYIndex，存储索引）
+        数据文件和索引文件可以放置在不同的目录，平均分布IO，获得更快的速度。
+      要指定索引文件和数据文件的路径，需要再创建表的时候通过Data Directory
+      和Index Directory语句指定，即不同MyISAM表的索引文件和数据文件可以放
+      置到不同的路径下。文件需要时绝对路径，并且具有访问权限。
+        MyISAM的表还支持3中不同的存储格式，分别是：
+          - 静态（固定长度）表
+          - 动态表
+          - 压缩表
+        - 其中静态表是默认的存储格式。静态表中的字段都是非变长字段，这样每个记
+          录都是固定长度的，这种存储方式的优点是存储非常迅速，容易缓存，出现故
+          障容易恢复；缺点是占用的空间通常比动态表多。静态表的数据在存储的时候
+          会按照列的宽度定义不足空格，当时在访问的时候并不会得到这些空格，这些
+          空格在返回应用之前已经去掉。
+        - 动态表中包含变长字段，记录是固定不变的，这样存储的优点是占用的空间相
+          对较少，但是频繁的更新删除记录会产生碎片，需要定期执行optimize 
+          table语句或myisamchk -r命令来改善性能，并且出现故障的时候恢复相对
+          比较困难。
+        - 压缩表有myisampack工具创建，占据非常小的磁盘空间。因为每个记录是被
+          单独压缩的，所以只有非常小的访问开支。
+    7.2.2 InnoDB 
+      InnoDB存储引擎提供了具有提交、回滚和崩溃回复能力的事务安全。但是对比
+      MyISAM的存储引擎，InnoDB写的处理效率差一些并且会占用更多的磁盘空间以保留
+      数据和索引。
+      - 自动增长列
+        InnoDB表的自动增长列可以手工插入，但是插入的值如果是空或者0，则实际插入
+        的将是自动增长后的值。例如，定义新表autoincre_demo，其中列i使用自动增
+        长列：
+          create table autoincre_demo 
+          (i smallint not null auto_increment,
+           name varchar(10),primary key(i)
+          )engine=innodb;
+          insert into autoincre_demo values(1,'1'),(0'2'),(null,'3');
+          select * from autoincre_demo;
+          查看自动增长列的处理情况，发现插入0或者实际插入的都将是自动增长后的值。
+        可以通过“alter table xxx auto_increment = n;”语句设置自增长列的初始
+        值，默认从1开始，但是该强制的默认值是保留在内存中的，如果该值在使用之前
+        数据库重新启动，那么这个强制的默认值就会丢失，就需要在数据库启动以后重
+        新设置。可以使用“last_insert_id()”查询当前线程最后插入记录使用的值。
+          对于InnoDB表，自动增长列必须是索引。如果是组合索引，也必须是组合索引的
+        第一列，但是对于MyISAM表，自动增长列可以是组合索引的其它列，这样插入记录
+        后，自动增长列是按照组合索引的前面几列进行排序后递增的。例如，创建一个新
+        的MyISAM类型的表autoincre_demo2，自动增长列d1作为组合索引的第二列，对
+        该表插入插入一些记录后，可以发现自动增长列是按照组合索引的第一列d2进行排
+        列后递增的：
+          create table autoincre_demo2 
+          (d1 smallint not null auto_increment,
+          d2 smallint not null,
+          name varchar(10),
+          index(d2,d1)
+          )engine=myisam;
+          insert into autoincre_demo2 (d2,name) values 
+          (2,'2'),(3,'3'),(4,'4'),(2,'2'),(3,'3'),(4,'4');
+          seelct * from autoincre_demo2;
+      - 外键约束
+          MySQL支持外键的存储引擎只有InnoDB，在创建外键的时候，要求父表必须
+        有对应的索引，子表在创建外键的时候也会自动创建对应的索引。
+          例如：创建两个表，country表是父表，country_id为主键索引，city表是
+        子表，country_id字段对country表的country_id有外键。
+          create table country (
+            country_id smallint unsigned not null auto_increment,
+            country varchar(50) not null,
+            last_update timestamp not null default current_timestamp on 
+            update current_timestamp,
+            primary key(country_id)
+          )engine=innodb default charset=utf8;
+          create table city (
+            city_id smallint unsigned not null auto_increment,
+            city varchar(50) not null,
+            country_id smallint unsigned not null,
+            last_update timestamp not null default current_timestamp
+            on update current_timestamp,
+            primary key (city_id),
+            key idx_fk_country_id (country_id),
+            constraint 'idx_fk_country_id' foreign key (country_id) 
+            references country (country_id) on delete restrict on 
+            update cascade
+          )engine=InnoDB default charset=utf8;
+          在创建索引的时候，可以指定在删除、更新父表时，对子表进行的相应操作，包
+        括restrict、cascade、set null和no action。其中restrict和no action相
+        同，是指限制在子表有关联记录的情况下父表不能更新；cascade表示父表在更新
+        或者删除时，更新或者删除子表对应记录；set null则表示父表在更新或者删除的
+        时，子表的对应字段被set null。选择后两种方式的时候要谨慎，可能会因为错误
+        的操作导致数据的丢失。例如上面创建的两个表，子表的外键指定是on delete 
+        restrict on update cascade方式的，那么在主表删除记录时，如果子表有对应
+        记录，则不允许删除，主表更新记录时，如果子表有对应记录，则子表对应更新。
+          当某个表被其他表创建了外键参照，那么该表的对应索引或者主键禁止被删除。
+          当导入多个表的数据时，如果需要忽略表之前的导入顺序，可以暂时关闭外键的
+        检查；同样，在执行load data和alter table操作的时候，可以通过暂时关闭外
+        键约束来暂时加快处理的速度，关闭的命令是“set foreign_key_checks=0;”，
+        执行完成后，通过执行“select foreign_key_checks=1;”语句改回原状态。
+          对于InnoDB类型的表，外键的信息通过使用show create table或者show 
+        table status命令都可以显示。
+      - 存储方式
+        - 使用共享表空间存储，这种方式创建的表的结构保存在.frm文件中，数据和索引
+          保存在innodb_data_dir和innodb_data_file_path定义的表空间中，可以是
+          多个文件。
+        - 使用多表空间存储，这种方式创建的表的表结构仍然保存在.frm文件中，但是每
+          个表的数据和索引单独保存在.ibd中。如果是个分区表，则每个分区对应单独的
+          .ibd文件，文件名是“表名+分区名”，可以再创建分区的时候指定每个分区的数
+          据文件的位置，以此来将表的IO均匀分布在多个磁盘上。
+        要使用多表空间的存储方式，需要设置参数innodb_file_per_table，并重新启动
+        服务后才可以生效，对于新建的表按照多表空间的方式创建，已有的表仍然使用共
+        享表空间存储。如果将已有的多表空间方式修改回共享表空间的方式，则新建表会
+        在共享表空间中创建，但已有的多表空间的表仍然保存原来的访问方式。所以多表
+        空间的参数生效后，只对新建的表生效。
+          多表空间的数据文件没有大小限制，不需要设置初始大小，也不需要设置文件的
+        最大限制、扩展大小等参数。
+          对于使用多表空间特性的表，可以比较方便地进行单表备份和回复操作，但是直
+        接复制.ibd文件是不行的，因为没有共享表空间的数据字典信息，直接复制的.ibd
+        文件和.frm文件恢复时是不能被正确认识的，但可以通过以下命令：
+          alter table tb1_name discard tablespace;
+          alter table tb1_name import tablespace;
+          将备份恢复到数据库中，但是这样备份的单表备份，只能恢复到表原来在的数据
+        库中，而不能恢复到其他的数据库中。如果要将单表恢复到目标数据库，则需要通
+        过mysqldump和mysqlimport来实现。
+        * 即便在多表空间的存储方式下，共享表空间仍然是必须的，InnoDB把内部数据词
+          典和未作日志放在这个文件中。
+    7.2.3 Memory 
+        memory存储引擎使用存在内存中的内容创建表。每个memory表只实际对应一个磁盘
+      文件，格式是.frm。memory类型的表访问非常快，因为它的数据是放在内存中的，并
+      且默认使用hash索引，但是一旦服务关闭，表中的数据就会丢失掉。 
+    7.2.4 Merge
+        merge存储引擎是一组myisam表的组合，这些myisam表必须是结构完全相同的，
+      merge本身并没有数据，对merge类型的表可以进行查询、更新、删除的操作，这些操
+      作实际上是对内部的实际的myisam表进行的。对于merge类型表的插入操作，是通过
+      insert_method子句定义插入的表，可以有三个不同的值，使用first或last值使得
+      插入操作被相应地作用在第一或最后一个表上，不定义这个子句或者定义为no，表示
+      不能对这个merge表执行插入操作。
+  7.3 如何选择合适的存储引擎
+      在选择存储引擎时，应根据应用特点选择适合的存储引擎，对于复杂的应用系统可以
+    根据实际情况选择多种存储引擎进行组合。
+      - MyISAM：默认的MySQL插件式存储引擎。如果应用是以读操作和插入操作为主，只有
+        很少的更新和删除操作，并且对事务的完整性、并发性要求不是很高，那么选择这个
+        存储引擎是非常合适的。MyISAM是在web、数据仓储和其它应用环境下最常使用的存
+        储引擎之一。
+      - InnoDB：用于事务处理应用程序，支持外键。如果应用对事务的完整性有比较高的要
+        求，在并发条件下要求数据的一致性，数据操作除了插入和查询以外，还包括很多的
+        更新、删除操作，那么InnoDB存储引擎应该是比较合适的选择。InnoDB存储引擎除了
+        有效地降低由于删除和更新导致的锁定，还可以确保事务的完整提交(commit)和回滚
+        (rollback)，对于类似计费系统或者财务系统等对数据准确性要求比较高的系统，
+        InnoDB都是合适的选择。
