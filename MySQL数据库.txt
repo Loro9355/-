@@ -828,4 +828,113 @@
       注意，InnoDB表的普通索引都会保存主键的键值，所以主键要尽可能选择较短的数
       据类型，可以有效地减少索引的磁盘占用，提高索引的缓存效果。
   10.3 Btree索引与Hash索引
-      
+      memory存储引擎的表可以选择使用Btree索引或者Hash索引，两种不同类型的索引
+    各有其不同的适用范围。Hash索引有需要注意：
+        - 只用于使用=或<=>操作符的等式比较。
+        - 优化器不能使用hash索引来加速order by操作。
+        - MySQL不能确定在两个值之间大约有多少行。如果将一个MyISAM表改为Hash索
+          引的memory表，会影响一些查询的执行效率。
+        - 只能使用整个关键字来搜索一行。
+      而对于Btree索引，当使用>、<、>=、<=、between、!=或者<>,或者like 
+    'pattern'（其中pattern不以通配符开始）操作符时，都可以使用相关列上的索引。
+      * 索引用于快速找出在某个列中有一特定值的行。
+11 视图
+  11.1 什么是视图
+      视图（View）是一种虚拟存在的表，对于使用视图的用户来说基本上是透明的。视
+    图并不在数据库中实际存在，行和列数据来自定义视图的查询中使用的表，并且是在使
+    用视图时动态生成的。
+      视图相对于普通的表的优势主要包括：
+        - 简单：使用视图的用户完全不需要关心后面对用的表的结构、关联条件和筛选
+          条件，对用户来说已经是过滤好的符合条件的结果集。
+        - 安全：使用视图的用户只能访问他们被允许查询的结果集，对表的权限管理并不
+          能限制到某个行某个列，但是通过视图可以简单地实现。
+        - 数据独立：一旦视图的结构确定了，可以屏蔽表结构变化对用户的影响，源表增
+          加列对视图没有影响；源表修改列名，则可以通过修改视图来解决，不会造成对
+          访问者的影响。
+  11.2 视图操作
+      视图的操作包括创建或者修改视图、删除视图，以及查看视图定义。
+    - 创建或者修改视图
+        创建视图需要有create view的权限，并且对于查询涉及的列有select权限。如果
+      使用create or replace或者alter修改视图，那么还需要改视图的drop权限。
+        创建视图的语法为：
+          create [or replace] [
+            [algorithm = {undefined | merge | temptable}]
+            view view_name [(column_name)]
+            as select_statement
+            [with [cascaded | local] check option]          
+        修改视图的语法为：
+          alter [algorithm = {undefined | merge | temptable}]
+          view view_name [(column_list)]
+          as select_statement 
+          [with [cascaded | local] check option]
+        MySQL视图的定义有一些限制，例如，在from关键字后面不能包含子查询，这和其他
+      数据库是不同的，如果视图是从其他数据库迁移过来的，那么可能需要因此做一些改
+      动，可以将子查询的内容定义成一个视图，然后对该视图再创建视图就可以实现类似的
+      功能了。
+        视图的可更新性和视图中查询的定义有关系，一下类型的视图是不可更新的：
+          - 包含以下关键字的SQL语句：聚合函数（sum、min、max、count等）、
+            distinct、group by、having、union或者union all。 
+          - 常量视图。
+          - select中包含子查询。
+          - join。
+          - from一个不能更新的视图。
+          - where字句的子查询引用了from字句中的表。
+        with [cascaded | local] check option决定了是否允许更新数据使记录不再满足
+      视图的条件：
+          - local是只要满足本视图的条件就可以更新
+          - cascaded则是必须满足所有针对该视图的所有视图的条件才可以更新。
+        如果没有明确是local还是cascaded，则默认是cascaded。
+  - 删除视图
+      用户可以一次删除一个或者多个视图，前提是必须有该视图的drop权限。语法：
+        drop view [if exists] view_name [, view_name] ...[restrict | cascade]
+12 存储过程和函数
+  12.1 什么是存储过程和函数
+      存储过程和函数是事先经过编译并在数据库中的一段SQL语句的集合，调用存储过程和函数
+    可以简化应用开发人员的很多工作，减少数据在数据库和应用服务器之间的传输，对于提高
+    数据处理的效率是由好处的。
+      存储过程和函数的区别在于函数必须有返回值，而存储过程没有，存储过程的参数可以使用
+    in、out、inout类型，而函数的参数只能是in类型。如果有函数从其他类型的数据库迁移到
+    MySQL，那么就可能需要将函数改造成存储过程。
+  12.2 存储过程和函数的相关操作
+      在对存储过程或函数进行操作时，需要首先确认用户是否具有相应的权限。例如，创建存
+    储过程或者函数需要create routine权限，修改或者删除存储过程或者函数需要alter 
+    routine权限，执行存储过程或者函数需要execute权限。
+      - 创建、修改存储过程或者函数
+        创建、修改存储过程或者函数的语法：
+          create procedure sp_name ([proc_parameter[,...]])
+                 [characteristic ...] routine_body
+          
+          create function sp_name ([func_parameter[,...]])
+                 return type
+                 [characteristic ...] routine_body
+
+                 proc_parameter:
+                 [in | out | inout] param_name type 
+
+                 func_parameter:
+                 param_name type 
+          type:
+                 any valid MySQL data type 
+          
+          characteristic:
+                 language sql
+            | [not] deterministic
+            | { contains sql | no sql | reads sql data | modifies sql data }
+            | sql security { definer | invoker }
+            | comment 'string'
+
+          routine_body:
+                 valid sql procedure statement or statements
+          
+          alter {procedure | function} sp_name {characteristic ...}
+          
+          characteristic:
+              { contains sql | no sql | reads sql data | modifies sql data }
+            | sql security { definer | invoker }
+            | commit 'string'
+        调用过程如下：
+          call sp_name([parameter[,...]])
+        MySQL的存储过程和函数允许包含DDL语句，也允许在存储过程中执行提交（commit，
+      即确认之前的修改）或者回滚（rollback，即放弃之前的修改），但是存储过程和函数
+      中不允许执行load data infile语句。此外，存储过程和函数中可以调用其他的过程
+      或者函数。
